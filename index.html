@@ -169,7 +169,7 @@
             }
         });
 
-        // Xử lý nhận diện giọng nói
+        // XỬ LÝ GIỌNG NÓI - TỰ ĐỘNG LỌC LẤY SỐ VÀ NỐI CHỮ 'P'
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
 
@@ -180,7 +180,9 @@
             recognition.interimResults = false;
 
             recognition.onstart = function() {
-                document.getElementById('voice-status').classList.remove('hidden');
+                const statusEl = document.getElementById('voice-status');
+                statusEl.innerText = "🔴 Đang nghe... Chỉ cần đọc phần SỐ";
+                statusEl.classList.remove('hidden');
             };
 
             recognition.onend = function() {
@@ -188,23 +190,53 @@
             };
 
             recognition.onresult = function(event) {
-                const speechResult = event.results[0][0].transcript;
-                document.getElementById('manual-input').value = speechResult;
-                processCheckin(speechResult);
+                const rawSpeech = event.results[0][0].transcript;
+                
+                // 1. Chỉ giữ lại các chữ số (0-9), loại bỏ hoàn toàn ký tự chữ (B, P, V...)
+                const digitsOnly = rawSpeech.replace(/\D/g, '');
+
+                if (digitsOnly) {
+                    // 2. Tự động gắn chữ 'P' vào đầu chuỗi số
+                    const finalEmployeeId = 'P' + digitsOnly;
+                    
+                    document.getElementById('manual-input').value = finalEmployeeId;
+                    processCheckin(finalEmployeeId);
+                } else {
+                    alert("Không nhận diện được số nào! Vui lòng đọc rõ phần chữ số.");
+                }
             };
 
             recognition.onerror = function(event) {
                 console.error("Lỗi giọng nói:", event.error);
                 document.getElementById('voice-status').classList.add('hidden');
+                
+                if (event.error === 'not-allowed') {
+                    alert("Bạn cần cấp quyền truy cập Micro cho ứng dụng/trình duyệt!");
+                } else if (event.error === 'service-not-allowed') {
+                    alert("Điện thoại yêu cầu trang web chạy kết nối HTTPS (https://) để mở Micro!");
+                } else {
+                    alert("Lỗi nhận diện giọng nói: " + event.error);
+                }
             };
         }
 
         function toggleVoiceRecognition() {
-            if (!recognition) {
-                alert("Trình duyệt hiện tại chưa hỗ trợ giọng nói!");
+            // Kiểm tra kết nối HTTPS khi dùng trên điện thoại
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                alert("Nhận diện giọng nói trên điện thoại bắt buộc web phải chạy qua HTTPS (https://)!");
                 return;
             }
-            recognition.start();
+
+            if (!recognition) {
+                alert("Trình duyệt này không hỗ trợ Web Speech API! Bạn nên mở trên Chrome (Android) hoặc Safari (iOS).");
+                return;
+            }
+
+            try {
+                recognition.start();
+            } catch (e) {
+                recognition.stop();
+            }
         }
 
         // Khởi tạo thư viện quét
