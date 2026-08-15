@@ -97,13 +97,22 @@
                 overlayDetail.innerText = `${employee.name} (${employee.id})`;
                 
                 // Ghi nhận vào Google Sheets
-                logCheckin(employee);
+                ogCheckin({
+            id: employee.id,
+            name: employee.name,
+            status: "Hợp lệ"
+        });
             } else {
                 // TRƯỜNG HỢP KHÔNG HỢP LỆ (Hiện Dấu X ✕)
                 overlay.classList.add('bg-rose-600/90');
                 overlayIcon.innerHTML = '✕';
                 overlayMsg.innerText = 'KHÔNG HỢP LỆ';
-                overlayDetail.innerText = `Mã: ${scannedId}`;
+                overlayDetail.innerText = `${employee.name} (${employee.id})`;
+                ogCheckin({
+            id: employee.id,
+            name: employee.name,
+            status: "Không hợp lệ"
+        });
             }
 
             // Tự động tắt màn hình kết quả sau 2.5 giây để quét tiếp
