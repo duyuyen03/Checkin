@@ -24,7 +24,8 @@
         <!-- Khung quét Camera -->
         <div class="relative rounded-xl overflow-hidden border-2 border-slate-600 bg-black">
             <div id="reader" class="w-full"></div>
-
+     <!-- Kết nối tới data -->       
+<div id="status-sync" class="text-xs text-center text-slate-400">Đang đồng bộ dữ liệu...</div>
             <!-- Màn hình hiển thị Tick (✓) hoặc Cross (✕) đè lên camera -->
             <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-50">
                 <div id="overlay-icon" class="text-8xl font-black icon-overlay"></div>
@@ -44,13 +45,16 @@
         let employeeDatabase = [];
         let isProcessing = false;
 
-        // Fetch danh sách nhân viên ngầm từ Google Sheets
+       // Fetch danh sách nhân viên từ Google Sheets
         async function fetchEmployees() {
             try {
                 const res = await fetch(API_URL);
                 employeeDatabase = await res.json();
+                document.getElementById('status-sync').innerText = `✓ Danh sách có ${employeeDatabase.length} nhân viên`;
+                document.getElementById('status-sync').classList.add('text-green-400');
             } catch (err) {
-                console.error("Lỗi kết nối Google Sheets:", err);
+                document.getElementById('status-sync').innerText = '✗ Lỗi kết nối Google Sheets!';
+                document.getElementById('status-sync').classList.add('text-red-400');
             }
         }
 
