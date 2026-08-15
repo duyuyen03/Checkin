@@ -24,8 +24,9 @@
         <!-- Khung quét Camera -->
         <div class="relative rounded-xl overflow-hidden border-2 border-slate-600 bg-black">
             <div id="reader" class="w-full"></div>
-     <!-- Kết nối tới data -->       
-<div id="status-sync" class="text-xs text-center text-slate-400">Đang đồng bộ dữ liệu...</div>
+            <!-- Kết nối tới data -->       
+            <div id="status-sync" class="text-xs text-center text-slate-400 py-1">Đang đồng bộ dữ liệu...</div>
+            
             <!-- Màn hình hiển thị Tick (✓) hoặc Cross (✕) đè lên camera -->
             <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-50">
                 <div id="overlay-icon" class="text-8xl font-black icon-overlay"></div>
@@ -34,8 +35,29 @@
             </div>
         </div>
 
+        <!-- Khung Nhập Tay & Giọng Nói -->
+        <div class="space-y-2 pt-1">
+            <div class="flex items-center space-x-2">
+                <input type="text" id="manual-input" placeholder="Nhập Mã NV thủ công..." 
+                    class="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none focus:border-cyan-400">
+                
+                <!-- Nút Giọng nói -->
+                <button id="voice-btn" onclick="toggleVoiceRecognition()" title="Đọc Mã NV bằng giọng nói"
+                    class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg border border-slate-600 text-cyan-400">
+                    🎤
+                </button>
+                
+                <!-- Nút Gửi Mã -->
+                <button onclick="handleManualSubmit()" 
+                    class="bg-cyan-600 hover:bg-cyan-500 font-semibold px-4 py-2 rounded-lg text-sm">
+                    Gửi
+                </button>
+            </div>
+            <div id="voice-status" class="text-xs text-center text-yellow-400 hidden">🔴 Đang nghe... Hãy đọc Mã NV</div>
+        </div>
+
         <div class="text-center text-xs text-slate-400">
-            Đưa mã barcode trên thẻ nhân viên vào khung hình
+            Đưa mã barcode trên thẻ nhân viên vào khung hình hoặc nhập mã trực tiếp
         </div>
     </div>
 
@@ -45,16 +67,16 @@
         let employeeDatabase = [];
         let isProcessing = false;
 
-       // Fetch danh sách nhân viên từ Google Sheets
+        // Fetch danh sách nhân viên từ Google Sheets
         async function fetchEmployees() {
             try {
                 const res = await fetch(API_URL);
                 employeeDatabase = await res.json();
                 document.getElementById('status-sync').innerText = `✓ Danh sách có ${employeeDatabase.length} nhân viên`;
-                document.getElementById('status-sync').classList.add('text-green-400');
+                document.getElementById('status-sync').className = "text-xs text-center text-green-400 font-medium py-1";
             } catch (err) {
                 document.getElementById('status-sync').innerText = '✗ Lỗi kết nối Google Sheets!';
-                document.getElementById('status-sync').classList.add('text-red-400');
+                document.getElementById('status-sync').className = "text-xs text-center text-red-400 font-medium py-1";
             }
         }
 
@@ -74,11 +96,17 @@
 
         // Xử lý sự kiện Quét Barcode thành công
         function onScanSuccess(decodedText) {
-            if (isProcessing) return;
+            processCheckin(decodedText);
+        }
+
+        // Hàm xử lý chung cho Quét Barcode, Nhập tay và Giọng nói
+        function processCheckin(rawInput) {
+            if (isProcessing || !rawInput) return;
             isProcessing = true;
 
-            const scannedId = decodedText.trim();
-            const employee = employeeDatabase.find(emp => emp.id === scannedId);
+            // Loại bỏ khoảng trắng thừa & chuẩn hóa mã
+            const scannedId = rawInput.trim().toUpperCase().replace(/\s+/g, '');
+            const employee = employeeDatabase.find(emp => emp.id.toUpperCase() === scannedId);
 
             const overlay = document.getElementById('overlay');
             const overlayIcon = document.getElementById('overlay-icon');
@@ -94,7 +122,6 @@
                 overlayMsg.innerText = 'HỢP LỆ';
                 overlayDetail.innerText = `${employee.name} (${employee.id})`;
                 
-                // Sửa lỗi gõ sai ogCheckin -> logCheckin
                 logCheckin({
                     id: employee.id,
                     name: employee.name,
@@ -106,10 +133,8 @@
                 overlayIcon.innerHTML = '✕';
                 overlayMsg.innerText = 'KHÔNG HỢP LỆ';
                 
-                // An toàn khi employee bị undefined
                 overlayDetail.innerText = `Mã: ${scannedId}`;
 
-                // Ghi nhận lịch sử không hợp lệ
                 logCheckin({
                     id: scannedId,
                     name: "N/A",
@@ -117,13 +142,66 @@
                 });
             }
             
-fetchEmployees();
+            fetchEmployees();
+
+            // Clear input field nếu có
+            document.getElementById('manual-input').value = '';
             
             // Tự động tắt màn hình kết quả sau 2.5 giây để quét tiếp
             setTimeout(() => {
                 overlay.classList.add('hidden');
                 isProcessing = false;
             }, 2500);
+        }
+
+        // Xử lý khi nhập tay
+        function handleManualSubmit() {
+            const val = document.getElementById('manual-input').value;
+            processCheckin(val);
+        }
+
+        document.getElementById('manual-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleManualSubmit();
+            }
+        });
+
+        // Xử lý nhận diện giọng nói
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'vi-VN';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = function() {
+                document.getElementById('voice-status').classList.remove('hidden');
+            };
+
+            recognition.onend = function() {
+                document.getElementById('voice-status').classList.add('hidden');
+            };
+
+            recognition.onresult = function(event) {
+                const speechResult = event.results[0][0].transcript;
+                document.getElementById('manual-input').value = speechResult;
+                processCheckin(speechResult);
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Lỗi giọng nói:", event.error);
+                document.getElementById('voice-status').classList.add('hidden');
+            };
+        }
+
+        function toggleVoiceRecognition() {
+            if (!recognition) {
+                alert("Trình duyệt hiện tại chưa hỗ trợ giọng nói!");
+                return;
+            }
+            recognition.start();
         }
 
         // Khởi tạo thư viện quét
