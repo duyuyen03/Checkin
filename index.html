@@ -52,7 +52,7 @@
             try {
                 const res = await fetch(API_URL);
                 employeeDatabase = await res.json();
-                document.getElementById('status-sync').innerText = `✓ Đã tải ${employeeDatabase.length} nhân viên`;
+                document.getElementById('status-sync').innerText = `✓ Danh sách có ${employeeDatabase.length} nhân viên`;
                 document.getElementById('status-sync').classList.add('text-green-400');
             } catch (err) {
                 document.getElementById('status-sync').innerText = '✗ Lỗi kết nối Google Sheets!';
