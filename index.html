@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Check-in Barcode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        .icon-overlay {
+            animation: popIn 0.3s ease-out forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-6 space-y-4 border border-slate-700">
+        <h1 class="text-xl font-bold text-center text-cyan-400">CHECK-IN NHÂN VIÊN</h1>
+        
+        <!-- Trạng thái kết nối Google Sheets -->
+        <div id="status-sync" class="text-xs text-center text-slate-400">Đang đồng bộ dữ liệu...</div>
+
+        <!-- Khung quét Camera -->
+        <div class="relative rounded-xl overflow-hidden border-2 border-slate-600 bg-black">
+            <div id="reader" class="w-full"></div>
+
+            <!-- Màn hình hiển thị Tick (✓) hoặc Cross (✕) đè lên camera -->
+            <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-50">
+                <div id="overlay-icon" class="text-8xl font-black icon-overlay"></div>
+                <div id="overlay-msg" class="text-lg font-bold mt-2 px-4 text-center"></div>
+                <div id="overlay-detail" class="text-sm mt-1 text-slate-200"></div>
+            </div>
+        </div>
+
+        <div class="text-center text-xs text-slate-400">
+            Đưa mã barcode trên thẻ nhân viên vào khung hình
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbxKx4b25t2pGN6q4z1sKVfMhIgFlk5RCx4BYsaTWYVC-0kTxkXr7fwaQp49ynpZNUsy/exec"; 
+        
+        let employeeDatabase = [];
+        let isProcessing = false;
+
+        // Fetch danh sách nhân viên từ Google Sheets
+        async function fetchEmployees() {
+            try {
+                const res = await fetch(API_URL);
+                employeeDatabase = await res.json();
+                document.getElementById('status-sync').innerText = `✓ Đã tải ${employeeDatabase.length} nhân viên`;
+                document.getElementById('status-sync').classList.add('text-green-400');
+            } catch (err) {
+                document.getElementById('status-sync').innerText = '✗ Lỗi kết nối Google Sheets!';
+                document.getElementById('status-sync').classList.add('text-red-400');
+            }
+        }
+
+        // Ghi lịch sử check-in vào Google Sheets khi quét đúng
+        async function logCheckin(employee) {
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(employee)
+                });
+            } catch (e) {
+                console.error("Lỗi ghi log:", e);
+            }
+        }
+
+        // Xử lý sự kiện Quét Barcode thành công
+        function onScanSuccess(decodedText) {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            const scannedId = decodedText.trim();
+            const employee = employeeDatabase.find(emp => emp.id === scannedId);
+
+            const overlay = document.getElementById('overlay');
+            const overlayIcon = document.getElementById('overlay-icon');
+            const overlayMsg = document.getElementById('overlay-msg');
+            const overlayDetail = document.getElementById('overlay-detail');
+
+            overlay.classList.remove('hidden', 'bg-emerald-600/90', 'bg-rose-600/90');
+
+            if (employee) {
+                // TRƯỜNG HỢP HỢP LỆ (Hiện Dấu Tick ✓)
+                overlay.classList.add('bg-emerald-600/90');
+                overlayIcon.innerHTML = '✓';
+                overlayMsg.innerText = 'HỢP LỆ';
+                overlayDetail.innerText = `${employee.name} (${employee.id})`;
+                
+                // Ghi nhận vào Google Sheets
+                logCheckin(employee);
+            } else {
+                // TRƯỜNG HỢP KHÔNG HỢP LỆ (Hiện Dấu X ✕)
+                overlay.classList.add('bg-rose-600/90');
+                overlayIcon.innerHTML = '✕';
+                overlayMsg.innerText = 'KHÔNG HỢP LỆ';
+                overlayDetail.innerText = `Mã: ${scannedId}`;
+            }
+
+            // Tự động tắt màn hình kết quả sau 2.5 giây để quét tiếp
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                isProcessing = false;
+            }, 2500);
+        }
+
+        // Khởi tạo thư viện quét
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { 
+                fps: 15, 
+                qrbox: { width: 280, height: 160 },
+                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+            },
+            false
+        );
+
+        html5QrcodeScanner.render(onScanSuccess);
+        fetchEmployees();
+    </script>
+</body>
+</html>
