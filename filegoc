@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Check-in Barcode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style>
+        .icon-overlay {
+            animation: popIn 0.3s ease-out forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-6 space-y-4 border border-slate-700">
+        <h1 class="text-xl font-bold text-center text-cyan-400">CHECK-IN NHÂN VIÊN</h1>
+
+        <!-- Khung quét Camera -->
+        <div class="relative rounded-xl overflow-hidden border-2 border-slate-600 bg-black">
+            <div id="reader" class="w-full"></div>
+            <!-- Kết nối tới data -->       
+            <div id="status-sync" class="text-xs text-center text-slate-400 py-1">Đang đồng bộ dữ liệu...</div>
+            
+            <!-- Màn hình hiển thị Tick (✓) hoặc Cross (✕) đè lên camera -->
+            <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-50">
+                <div id="overlay-icon" class="text-8xl font-black icon-overlay"></div>
+                <div id="overlay-msg" class="text-lg font-bold mt-2 px-4 text-center"></div>
+                <div id="overlay-detail" class="text-sm mt-1 text-slate-200"></div>
+            </div>
+        </div>
+
+        <!-- Khung Nhập Tay & Giọng Nói -->
+        <div class="space-y-2 pt-1">
+            <div class="flex items-center space-x-2">
+                <input type="text" id="manual-input" placeholder="Nhập Mã NV thủ công..." 
+                    class="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none focus:border-cyan-400">
+                
+                <!-- Nút Giọng nói -->
+                <button id="voice-btn" onclick="toggleVoiceRecognition()" title="Đọc Mã NV bằng giọng nói"
+                    class="bg-slate-700 hover:bg-slate-600 p-2 rounded-lg border border-slate-600 text-cyan-400">
+                    🎤
+                </button>
+                
+                <!-- Nút Gửi Mã -->
+                <button onclick="handleManualSubmit()" 
+                    class="bg-cyan-600 hover:bg-cyan-500 font-semibold px-4 py-2 rounded-lg text-sm">
+                    Gửi
+                </button>
+            </div>
+            <div id="voice-status" class="text-xs text-center text-yellow-400 hidden">🔴 Đang nghe... Hãy đọc Mã NV</div>
+        </div>
+
+        <div class="text-center text-xs text-slate-400">
+            Đưa mã barcode trên thẻ nhân viên vào khung hình hoặc nhập mã trực tiếp
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbzkMP5dqT_wGdS6NrYfz1n4tViQ5tg2bLJ_jRgkRYK7q2WFhNMQh84v3CSi4w405ks/exec"; 
+        
+        let employeeDatabase = [];
+        let isProcessing = false;
+
+        // Fetch danh sách nhân viên từ Google Sheets
+        async function fetchEmployees() {
+            try {
+                const res = await fetch(API_URL);
+                employeeDatabase = await res.json();
+                document.getElementById('status-sync').innerText = `✓ Danh sách có ${employeeDatabase.length} nhân viên`;
+                document.getElementById('status-sync').className = "text-xs text-center text-green-400 font-medium py-1";
+            } catch (err) {
+                document.getElementById('status-sync').innerText = '✗ Lỗi kết nối Google Sheets!';
+                document.getElementById('status-sync').className = "text-xs text-center text-red-400 font-medium py-1";
+            }
+        }
+
+        // Ghi lịch sử check-in vào Google Sheets
+        async function logCheckin(logData) {
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(logData)
+                });
+            } catch (e) {
+                console.error("Lỗi ghi log:", e);
+            }
+        }
+
+        // Xử lý sự kiện Quét Barcode thành công
+        function onScanSuccess(decodedText) {
+            processCheckin(decodedText);
+        }
+
+        // Hàm xử lý chung cho Quét Barcode, Nhập tay và Giọng nói
+        function processCheckin(rawInput) {
+            if (isProcessing || !rawInput) return;
+            isProcessing = true;
+
+            // Loại bỏ khoảng trắng thừa & chuẩn hóa mã
+            const scannedId = rawInput.trim().toUpperCase().replace(/\s+/g, '');
+            const employee = employeeDatabase.find(emp => emp.id.toUpperCase() === scannedId);
+
+            const overlay = document.getElementById('overlay');
+            const overlayIcon = document.getElementById('overlay-icon');
+            const overlayMsg = document.getElementById('overlay-msg');
+            const overlayDetail = document.getElementById('overlay-detail');
+
+            overlay.classList.remove('hidden', 'bg-emerald-600/90', 'bg-rose-600/90');
+
+            if (employee) {
+                // TRƯỜNG HỢP HỢP LỆ (Hiện Dấu Tick ✓)
+                overlay.classList.add('bg-emerald-600/90');
+                overlayIcon.innerHTML = '✓';
+                overlayMsg.innerText = 'HỢP LỆ';
+                overlayDetail.innerText = `${employee.name} (${employee.id})`;
+                
+                logCheckin({
+                    id: employee.id,
+                    name: employee.name,
+                    status: "Hợp lệ"
+                });
+            } else {
+                // TRƯỜNG HỢP KHÔNG HỢP LỆ (Hiện Dấu X ✕)
+                overlay.classList.add('bg-rose-600/90');
+                overlayIcon.innerHTML = '✕';
+                overlayMsg.innerText = 'KHÔNG HỢP LỆ';
+                
+                overlayDetail.innerText = `Mã: ${scannedId}`;
+
+                logCheckin({
+                    id: scannedId,
+                    name: "N/A",
+                    status: "Không hợp lệ"
+                });
+            }
+            
+            fetchEmployees();
+
+            // Clear input field nếu có
+            document.getElementById('manual-input').value = '';
+            
+            // Tự động tắt màn hình kết quả sau 2.5 giây để quét tiếp
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                isProcessing = false;
+            }, 2500);
+        }
+
+        // Xử lý khi nhập tay
+        function handleManualSubmit() {
+            const val = document.getElementById('manual-input').value;
+            processCheckin(val);
+        }
+
+        document.getElementById('manual-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                handleManualSubmit();
+            }
+        });
+
+        // Xử lý nhận diện giọng nói
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition = null;
+
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'vi-VN';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = function() {
+                document.getElementById('voice-status').classList.remove('hidden');
+            };
+
+            recognition.onend = function() {
+                document.getElementById('voice-status').classList.add('hidden');
+            };
+
+            recognition.onresult = function(event) {
+                const speechResult = event.results[0][0].transcript;
+                document.getElementById('manual-input').value = speechResult;
+                processCheckin(speechResult);
+            };
+
+            recognition.onerror = function(event) {
+                console.error("Lỗi giọng nói:", event.error);
+                document.getElementById('voice-status').classList.add('hidden');
+            };
+        }
+
+        function toggleVoiceRecognition() {
+            if (!recognition) {
+                alert("Trình duyệt hiện tại chưa hỗ trợ giọng nói!");
+                return;
+            }
+            recognition.start();
+        }
+
+        // Khởi tạo thư viện quét
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { 
+                fps: 15, 
+                qrbox: { width: 280, height: 160 },
+                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+            },
+            false
+        );
+
+        html5QrcodeScanner.render(onScanSuccess);
+        fetchEmployees();
+    </script>
+</body>
+</html>
