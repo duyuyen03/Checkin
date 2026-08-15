@@ -20,9 +20,6 @@
 
     <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-2xl p-6 space-y-4 border border-slate-700">
         <h1 class="text-xl font-bold text-center text-cyan-400">CHECK-IN NHÂN VIÊN</h1>
-        
-        <!-- Trạng thái kết nối Google Sheets -->
-        <div id="status-sync" class="text-xs text-center text-slate-400">Đang đồng bộ dữ liệu...</div>
 
         <!-- Khung quét Camera -->
         <div class="relative rounded-xl overflow-hidden border-2 border-slate-600 bg-black">
@@ -47,27 +44,24 @@
         let employeeDatabase = [];
         let isProcessing = false;
 
-        // Fetch danh sách nhân viên từ Google Sheets
+        // Fetch danh sách nhân viên ngầm từ Google Sheets
         async function fetchEmployees() {
             try {
                 const res = await fetch(API_URL);
                 employeeDatabase = await res.json();
-                document.getElementById('status-sync').innerText = `✓ Danh sách có ${employeeDatabase.length} nhân viên`;
-                document.getElementById('status-sync').classList.add('text-green-400');
             } catch (err) {
-                document.getElementById('status-sync').innerText = '✗ Lỗi kết nối Google Sheets!';
-                document.getElementById('status-sync').classList.add('text-red-400');
+                console.error("Lỗi kết nối Google Sheets:", err);
             }
         }
 
-        // Ghi lịch sử check-in vào Google Sheets khi quét đúng
-        async function logCheckin(employee) {
+        // Ghi lịch sử check-in vào Google Sheets
+        async function logCheckin(logData) {
             try {
                 await fetch(API_URL, {
                     method: 'POST',
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(employee)
+                    body: JSON.stringify(logData)
                 });
             } catch (e) {
                 console.error("Lỗi ghi log:", e);
@@ -96,23 +90,27 @@
                 overlayMsg.innerText = 'HỢP LỆ';
                 overlayDetail.innerText = `${employee.name} (${employee.id})`;
                 
-                // Ghi nhận vào Google Sheets
-                ogCheckin({
-            id: employee.id,
-            name: employee.name,
-            status: "Hợp lệ"
-        });
+                // Sửa lỗi gõ sai ogCheckin -> logCheckin
+                logCheckin({
+                    id: employee.id,
+                    name: employee.name,
+                    status: "Hợp lệ"
+                });
             } else {
                 // TRƯỜNG HỢP KHÔNG HỢP LỆ (Hiện Dấu X ✕)
                 overlay.classList.add('bg-rose-600/90');
                 overlayIcon.innerHTML = '✕';
                 overlayMsg.innerText = 'KHÔNG HỢP LỆ';
-                overlayDetail.innerText = `${employee.name} (${employee.id})`;
-                ogCheckin({
-            id: employee.id,
-            name: employee.name,
-            status: "Không hợp lệ"
-        });
+                
+                // An toàn khi employee bị undefined
+                overlayDetail.innerText = `Mã: ${scannedId}`;
+
+                // Ghi nhận lịch sử không hợp lệ
+                logCheckin({
+                    id: scannedId,
+                    name: "N/A",
+                    status: "Không hợp lệ"
+                });
             }
 
             // Tự động tắt màn hình kết quả sau 2.5 giây để quét tiếp
