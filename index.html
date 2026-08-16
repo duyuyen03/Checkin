@@ -39,10 +39,10 @@
             <div id="status-sync" class="text-base text-center text-slate-400 py-1.5 font-medium">Đang đồng bộ dữ liệu...</div>
             
             <!-- Màn hình hiển thị Tick (✓) hoặc Cross (✕) đè lên camera -->
-            <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-50 p-4">
-                <div id="overlay-icon" class="text-9xl font-black icon-overlay"></div>
-                <div id="overlay-msg" class="text-3xl font-black mt-2 text-center tracking-wider"></div>
-                <div id="overlay-detail" class="text-xl font-bold mt-2 text-center text-white leading-relaxed"></div>
+            <div id="overlay" class="absolute inset-0 flex flex-col items-center justify-center hidden z-50 p-2">
+            <div id="overlay-icon" class="text-[10rem] leading-none font-black icon-overlay"></div>
+            <div id="overlay-msg" class="text-4xl sm:text-5xl font-black mt-1 text-center tracking-wider"></div>
+            <div id="overlay-detail" class="text-2xl font-black mt-2 text-center text-white leading-tight"></div>
             </div>
         </div>
 
@@ -135,7 +135,7 @@
                 overlayIcon.innerHTML = '✓';
                 overlayMsg.innerText = 'HỢP LỆ';
 
-                const shiftInfo = employee.shift ? `<br><span class="text-lg text-yellow-300 font-extrabold">Ca: ${employee.shift}</span>` : '';
+                const shiftInfo = employee.shift ? `<br><span class="text-xl text-yellow-300 font-black">Ca: ${employee.shift}</span>` : '';
                 overlayDetail.innerHTML = `${employee.name} (${employee.id})${shiftInfo}`;
                 
                 logCheckin({
@@ -260,7 +260,7 @@
             }
         }
 
-        // KHỞI TẠO TỰ ĐỘNG MỞ CAMERA SAU VÀ VẼ KHUNG QUÉT TỐI ƯU CHO ANDROID
+
 const html5QrCode = new Html5Qrcode("reader");
 
 // Đảm bảo DOM đã load xong kích thước khung chứa trước khi bật Camera
@@ -269,9 +269,7 @@ window.addEventListener("DOMContentLoaded", () => {
         { facingMode: "environment" },
         {
             fps: 15,
-            // Khai báo kích thước khung quét rõ ràng bằng pixel
             qrbox: { width: 260, height: 160 },
-            // Bật tính năng vẽ lại viền bao quanh vật thể quét
             showTorchButtonIfSupported: true
         },
         onScanSuccess,
