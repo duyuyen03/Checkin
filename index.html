@@ -49,8 +49,9 @@
         <!-- Khung Nhập Tay & Giọng Nói -->
         <div class="space-y-2 pt-1">
             <div class="flex items-center space-x-2">
-                <input type="text" id="manual-input" placeholder="Nhập Mã NV thủ công..." 
-                    class="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none focus:border-cyan-400">
+               <input type="text" id="manual-input" value="P" placeholder="Nhập phần số..." 
+    inputmode="numeric" pattern="[0-9]*"
+    class="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none focus:border-cyan-400">
                 
                 <!-- Nút Giọng nói -->
                 <button id="voice-btn" type="button" onclick="toggleVoiceRecognition()" title="Đọc Mã NV bằng giọng nói"
