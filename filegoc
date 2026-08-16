@@ -7,14 +7,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        .icon-overlay {
-            animation: popIn 0.3s ease-out forwards;
-        }
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-    </style>
+    .icon-overlay {
+        animation: popIn 0.3s ease-out forwards;
+    }
+    @keyframes popIn {
+        0% { transform: scale(0.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* BỔ SUNG: Ép hiển thị viền khung quét trên Android */
+    #reader canvas.qr-shaded-region {
+        opacity: 0.6 !important;
+    }
+    #reader__scan_region {
+        background: transparent !important;
+    }
+    #reader__scan_region img {
+        opacity: 0.8 !important;
+    }
+</style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
@@ -22,7 +33,7 @@
         <h1 class="text-xl font-bold text-center text-cyan-400">CHECK-IN NHÂN VIÊN</h1>
 
         <!-- Khung quét Camera -->
-        <div class="relative rounded-xl overflow-hidden border-2 border-slate-600 bg-black">
+        <div class="relative rounded-xl overflow-hidden border-2 border-slate-600 bg-black min-h-[220px]">
             <div id="reader" class="w-full"></div>
             <!-- Kết nối tới data -->       
             <div id="status-sync" class="text-xs text-center text-slate-400 py-1">Đang đồng bộ dữ liệu...</div>
@@ -38,8 +49,9 @@
         <!-- Khung Nhập Tay & Giọng Nói -->
         <div class="space-y-2 pt-1">
             <div class="flex items-center space-x-2">
-                <input type="text" id="manual-input" placeholder="Nhập Mã NV thủ công..." 
-                    class="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none focus:border-cyan-400">
+               <input type="text" id="manual-input" value="P" placeholder="Nhập phần số..." 
+    inputmode="numeric" pattern="[0-9]*"
+    class="flex-1 bg-slate-700 text-white px-3 py-2 rounded-lg text-sm border border-slate-600 focus:outline-none focus:border-cyan-400">
                 
                 <!-- Nút Giọng nói -->
                 <button id="voice-btn" type="button" onclick="toggleVoiceRecognition()" title="Đọc Mã NV bằng giọng nói"
@@ -65,7 +77,7 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbzkMP5dqT_wGdS6NrYfz1n4tViQ5tg2bLJ_jRgkRYK7q2WFhNMQh84v3CSi4w405ks/exec"; 
+        const API_URL = "https://script.google.com/macros/s/AKfycbwRZdN-upyvEkQeVL9wJ2SVrAoTcrVxk7QsIe7LzXeycYDD9S8mXxWirJhVF6EUFrPn/exec"; 
         
         let employeeDatabase = [];
         let isProcessing = false;
@@ -107,7 +119,6 @@
             if (isProcessing || !rawInput) return;
             isProcessing = true;
 
-            // Loại bỏ khoảng trắng thừa & chuẩn hóa mã
             const scannedId = rawInput.trim().toUpperCase().replace(/\s+/g, '');
             const employee = employeeDatabase.find(emp => emp.id.toUpperCase() === scannedId);
 
@@ -119,11 +130,12 @@
             overlay.classList.remove('hidden', 'bg-emerald-600/90', 'bg-rose-600/90');
 
             if (employee) {
-                // TRƯỜNG HỢP HỢP LỆ (Hiện Dấu Tick ✓)
                 overlay.classList.add('bg-emerald-600/90');
                 overlayIcon.innerHTML = '✓';
                 overlayMsg.innerText = 'HỢP LỆ';
-                overlayDetail.innerText = `${employee.name} (${employee.id})`;
+
+                const shiftInfo = employee.shift ? `<br><span class="text-xs text-amber-300 font-semibold">Ca: ${employee.shift}</span>` : '';
+                overlayDetail.innerHTML = `${employee.name} (${employee.id})${shiftInfo}`;
                 
                 logCheckin({
                     id: employee.id,
@@ -131,7 +143,6 @@
                     status: "Hợp lệ"
                 });
             } else {
-                // TRƯỜNG HỢP KHÔNG HỢP LỆ (Hiện Dấu X ✕)
                 overlay.classList.add('bg-rose-600/90');
                 overlayIcon.innerHTML = '✕';
                 overlayMsg.innerText = 'KHÔNG HỢP LỆ';
@@ -147,10 +158,8 @@
             
             fetchEmployees();
 
-            // Clear input field nếu có
             document.getElementById('manual-input').value = '';
             
-            // Tự động tắt màn hình kết quả sau 2.5 giây để quét tiếp
             setTimeout(() => {
                 overlay.classList.add('hidden');
                 isProcessing = false;
@@ -169,6 +178,20 @@
             }
         });
 
+        const manualInput = document.getElementById('manual-input');
+
+        manualInput.addEventListener('input', function(e) {
+            let val = this.value.toUpperCase();
+            
+            if (!val.startsWith('P')) {
+                val = 'P' + val.replace(/[^0-9]/g, '');
+            } else {
+                val = 'P' + val.slice(1).replace(/[^0-9]/g, '');
+            }
+            
+            this.value = val;
+        });
+        
         // XỬ LÝ GIỌNG NÓI - TỰ ĐỘNG LỌC LẤY SỐ VÀ NỐI CHỮ 'P'
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
@@ -192,11 +215,9 @@
             recognition.onresult = function(event) {
                 const rawSpeech = event.results[0][0].transcript;
                 
-                // 1. Chỉ giữ lại các chữ số (0-9), loại bỏ hoàn toàn ký tự chữ (B, P, V...)
                 const digitsOnly = rawSpeech.replace(/\D/g, '');
 
                 if (digitsOnly) {
-                    // 2. Tự động gắn chữ 'P' vào đầu chuỗi số
                     const finalEmployeeId = 'P' + digitsOnly;
                     
                     document.getElementById('manual-input').value = finalEmployeeId;
@@ -221,7 +242,6 @@
         }
 
         function toggleVoiceRecognition() {
-            // Kiểm tra kết nối HTTPS khi dùng trên điện thoại
             if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
                 alert("Nhận diện giọng nói trên điện thoại bắt buộc web phải chạy qua HTTPS (https://)!");
                 return;
@@ -239,18 +259,29 @@
             }
         }
 
-        // Khởi tạo thư viện quét
-        const html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader",
-            { 
-                fps: 15, 
-                qrbox: { width: 280, height: 160 },
-                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-            },
-            false
-        );
+        // KHỞI TẠO TỰ ĐỘNG MỞ CAMERA SAU VÀ VẼ KHUNG QUÉT TỐI ƯU CHO ANDROID
+const html5QrCode = new Html5Qrcode("reader");
 
-        html5QrcodeScanner.render(onScanSuccess);
+// Đảm bảo DOM đã load xong kích thước khung chứa trước khi bật Camera
+window.addEventListener("DOMContentLoaded", () => {
+    html5QrCode.start(
+        { facingMode: "environment" },
+        {
+            fps: 15,
+            // Khai báo kích thước khung quét rõ ràng bằng pixel
+            qrbox: { width: 260, height: 160 },
+            // Bật tính năng vẽ lại viền bao quanh vật thể quét
+            showTorchButtonIfSupported: true
+        },
+        onScanSuccess,
+        (errorMessage) => {
+            // Lỗi quét khung hình bình thường
+        }
+    ).catch(err => {
+        console.error("Không thể mở Camera:", err);
+    });
+});
+
         fetchEmployees();
     </script>
 </body>
