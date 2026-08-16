@@ -176,6 +176,20 @@
             }
         });
 
+        const manualInput = document.getElementById('manual-input');
+
+        manualInput.addEventListener('input', function(e) {
+            let val = this.value.toUpperCase();
+            
+            if (!val.startsWith('P')) {
+                val = 'P' + val.replace(/[^0-9]/g, '');
+            } else {
+                val = 'P' + val.slice(1).replace(/[^0-9]/g, '');
+            }
+            
+            this.value = val;
+        });
+        
         // XỬ LÝ GIỌNG NÓI - TỰ ĐỘNG LỌC LẤY SỐ VÀ NỐI CHỮ 'P'
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let recognition = null;
