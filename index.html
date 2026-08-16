@@ -49,26 +49,26 @@
         <!-- Khung Nhập Tay & Giọng Nói -->
         <div class="space-y-2 pt-1">
             <div class="flex items-center space-x-2">
-               <input type="text" id="manual-input" value="P" placeholder="Nhập phần số..." 
-    inputmode="numeric" pattern="[0-9]*"
-    class="flex-1 bg-slate-700 text-white px-4 py-3 rounded-xl text-xl font-bold border-2 border-slate-600 focus:outline-none focus:border-cyan-400">
+              <input type="text" id="manual-input" value="P" placeholder="Nhập phần số..." 
+            inputmode="numeric" pattern="[0-9]*"
+            class="flex-1 min-w-0 bg-slate-700 text-white px-3 py-2 rounded-lg text-lg font-bold border border-slate-600 focus:outline-none focus:border-cyan-400">
                 
                 <!-- Nút Giọng nói -->
                 <button id="voice-btn" type="button" onclick="toggleVoiceRecognition()" title="Đọc Mã NV bằng giọng nói"
-                    class="bg-slate-700 hover:bg-slate-600 p-3.5 rounded-xl border-2 border-slate-600 text-cyan-400 flex items-center justify-center transition-colors active:scale-95">
+                    class="shrink-0 bg-slate-700 hover:bg-slate-600 p-2.5 rounded-lg border border-slate-600 text-cyan-400 flex items-center justify-center transition-colors active:scale-95">
                     <svg class="w-5 h-5 fill-current pointer-events-none" viewBox="0 0 24 24">
                         <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                         <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
                     </svg>
                 </button>
                 
-                <!-- Nút Gửi Mã -->
+                <!-- Nút Gửi -->
                 <button onclick="handleManualSubmit()" 
-                    class="bg-cyan-600 hover:bg-cyan-500 font-bold px-5 py-3 rounded-xl text-lg transition-colors active:scale-95">
+                    class="shrink-0 bg-cyan-600 hover:bg-cyan-500 font-bold px-4 py-2 rounded-lg text-base transition-colors active:scale-95">
                     Gửi
                 </button>
             </div>
-            <div id="voice-status" class="text-sm font-semibold text-center text-yellow-400 hidden">🔴 Đang nghe... Hãy đọc Mã NV</div>
+            <div id="voice-status" class="text-xs font-semibold text-center text-yellow-400 hidden">🔴 Đang nghe... Hãy đọc Mã NV</div>
         </div>
 
         <div class="text-center text-xs text-slate-400">
