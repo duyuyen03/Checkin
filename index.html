@@ -133,7 +133,9 @@
                 overlay.classList.add('bg-emerald-600/90');
                 overlayIcon.innerHTML = '✓';
                 overlayMsg.innerText = 'HỢP LỆ';
-                overlayDetail.innerText = `${employee.name} (${employee.id})`;
+
+                const shiftInfo = employee.shift ? `<br><span class="text-xs text-amber-300 font-semibold">Ca: ${employee.shift}</span>` : '';
+                overlayDetail.innerHTML = `${employee.name} (${employee.id})${shiftInfo}`;
                 
                 logCheckin({
                     id: employee.id,
