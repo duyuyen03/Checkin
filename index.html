@@ -7,14 +7,25 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style>
-        .icon-overlay {
-            animation: popIn 0.3s ease-out forwards;
-        }
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-    </style>
+    .icon-overlay {
+        animation: popIn 0.3s ease-out forwards;
+    }
+    @keyframes popIn {
+        0% { transform: scale(0.5); opacity: 0; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* BỔ SUNG: Ép hiển thị viền khung quét trên Android */
+    #reader canvas.qr-shaded-region {
+        opacity: 0.6 !important;
+    }
+    #reader__scan_region {
+        background: transparent !important;
+    }
+    #reader__scan_region img {
+        opacity: 0.8 !important;
+    }
+</style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
