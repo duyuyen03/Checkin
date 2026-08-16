@@ -242,24 +242,28 @@
             }
         }
 
-        // KHỞI TẠO TỰ ĐỘNG MỞ CAMERA SAU (MẶC ĐỊNH & KHÔNG NÚT BẤM)
-        const html5QrCode = new Html5Qrcode("reader");
-        
-        // Thiết lập quét camera sau với cấu hình tối ưu
-        html5QrCode.start(
-            { facingMode: "environment" }, // Tự động chọn camera sau
-            {
-                fps: 15,
-                qrbox: { width: 280, height: 160 },
-                experimentalFeatures: { useBarCodeDetectorIfSupported: true }
-            },
-            onScanSuccess,
-            (errorMessage) => {
-                // Lỗi quét khung hình bình thường (không cần log)
-            }
-        ).catch(err => {
-            console.error("Không thể mở Camera:", err);
-        });
+        // KHỞI TẠO TỰ ĐỘNG MỞ CAMERA SAU VÀ VẼ KHUNG QUÉT TỐI ƯU CHO ANDROID
+const html5QrCode = new Html5Qrcode("reader");
+
+// Đảm bảo DOM đã load xong kích thước khung chứa trước khi bật Camera
+window.addEventListener("DOMContentLoaded", () => {
+    html5QrCode.start(
+        { facingMode: "environment" },
+        {
+            fps: 15,
+            // Khai báo kích thước khung quét rõ ràng bằng pixel
+            qrbox: { width: 260, height: 160 },
+            // Bật tính năng vẽ lại viền bao quanh vật thể quét
+            showTorchButtonIfSupported: true
+        },
+        onScanSuccess,
+        (errorMessage) => {
+            // Lỗi quét khung hình bình thường
+        }
+    ).catch(err => {
+        console.error("Không thể mở Camera:", err);
+    });
+});
 
         fetchEmployees();
     </script>
